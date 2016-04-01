@@ -41,13 +41,20 @@ public class Main {
             //ask user for input
             int i, j;
             Scanner s = new Scanner(System.in);
-            i = s.nextInt();
-            j = s.nextInt();
-            for (Node child : root.children) {
-                if (child.board[i][j] == 1) {
-                    playMove(child, false);
-                    return;
+            while (true) {
+                i = s.nextInt();
+                j = s.nextInt();
+                if (i < 0 || i > 2 || j < 0 || j > 2 || root.board[i][j] != -1) {
+                    System.out.println("Invalid move, try again.");
+                    continue;
                 }
+                for (Node child : root.children) {
+                    if (child.board[i][j] == 1) {
+                        playMove(child, false);
+                        return;
+                    }
+                }
+                System.out.println("Invalid move, try again.");
             }
         } else {
             //pick the child with the smallest value
