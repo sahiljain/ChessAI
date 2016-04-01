@@ -26,6 +26,15 @@ public class Main {
     private static void playMove(Node root, boolean xTurn) {
         printBoard(root.board);
         if (root.children.isEmpty()) {
+            if (root.value == 1) {
+                System.out.println("YOU WIN!");
+                return;
+            } else if (root.value == -1) {
+                System.out.println("YOU LOSE!");
+                return;
+            } else {
+                System.out.println("YOU DRAW!");
+            }
             return;
         }
         if (xTurn) {
@@ -57,9 +66,15 @@ public class Main {
         for (int i = 0; i < 3; i++) {
             System.out.print("|");
             for (int j = 0; j < 3; j++) {
-                System.out.print("\t" + board[i][j] + "\t");
+                char c = ' ';
+                if (board[i][j] == 1) {
+                    c = 'X';
+                } else if (board[i][j] == 0) {
+                    c = 'O';
+                }
+                System.out.print("\t" + c + "\t|");
             }
-            System.out.println("|");
+            System.out.println("");
             System.out.println("_________________________");
         }
         System.out.println();
