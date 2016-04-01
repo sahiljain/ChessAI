@@ -141,6 +141,16 @@ public class Main {
         return min;
     }
 
+    private static Node maxChild(ArrayList<Node> children) {
+        Node max = children.get(0);
+        for (int i = 1; i < children.size(); i++) {
+            if (children.get(i).value > max.value) {
+                max = children.get(i);
+            }
+        }
+        return max;
+    }
+
     private static int maxValue(ArrayList<Node> children) {
         int max = children.get(0).value;
         for (int i = 1; i < children.size(); i++) {
