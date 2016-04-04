@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.*;
 
 public abstract class Game<BoardType> {
 
@@ -35,24 +37,49 @@ public abstract class Game<BoardType> {
 
     public abstract boolean gameOver(BoardType board);
 
-    public abstract int evaluateBoard(BoardType board);
+    public abstract int evaluateBoard(BoardType board, Player player);
 
     public abstract void playHumanMove(Player humanPlayer);
 
     public abstract boolean doesHeWin(BoardType board, Player player);
 
     public void playComputerMove(Player player) {
-        Node root = new Node(currentBoard);
-        evaluateNodes(root, player);
+        long startTime = System.currentTimeMillis();
+        final Node root = new Node(currentBoard);
+        evaluateNodes(root, player, 4);
         Node child = player == Player.MINIMIZER ? minChild(root.children) : maxChild(root.children);
+//        final int[] depth = {4};
+
+//        ExecutorService executor = Executors.newSingleThreadExecutor();
+//        Callable<Node> task = () -> {
+//            evaluateNodes(root, player, ++depth[0]);
+//            return player == Player.MINIMIZER ? minChild(root.children) : maxChild(root.children);
+//        };
+//
+//        while (true) {
+//            long timeRemaining = startTime + 5 * 1000 - System.currentTimeMillis();
+//            if (timeRemaining <= 0) {
+//                break;
+//            }
+//            Future<Node> future = executor.submit(task);
+//            try {
+//                Node node = future.get(timeRemaining, TimeUnit.MILLISECONDS);
+//                child = node;
+//            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+//                //do nothing
+//            }
+//        }
+//
+//        executor.shutdownNow();
+//        System.out.println("depth: " + depth[0]);
         currentBoard = child.board;
     }
 
     public abstract List<BoardType> getChildren(BoardType board, Player player);
 
-    private void evaluateNodes(Node root, Player player) {
-        if (gameOver(root.board)) {
-            root.value = evaluateBoard(root.board);
+    private void evaluateNodes(Node root, Player player, int depth) {
+        if (gameOver(root.board) || depth == 0) {
+            root.value = evaluateBoard(root.board, player.opposite());
         } else {
             root.value = player == Player.MAXIMIZER ? Integer.MIN_VALUE : Integer.MAX_VALUE;
             root.children = new ArrayList<>();
@@ -61,7 +88,7 @@ public abstract class Game<BoardType> {
                 Node newChild = new Node(childBoard);
                 newChild.alpha = root.alpha;
                 newChild.beta = root.beta;
-                evaluateNodes(newChild, player.opposite());
+                evaluateNodes(newChild, player.opposite(), depth-1);
                 root.children.add(newChild);
                 if (player == Player.MAXIMIZER) {
                     root.value = Math.max(root.value, newChild.value);

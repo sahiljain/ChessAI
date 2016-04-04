@@ -40,7 +40,7 @@ public class TicTacToe extends Game<TicTacToe.Piece[][]> {
     }
 
     @Override
-    public int evaluateBoard(Piece[][] board) {
+    public int evaluateBoard(Piece[][] board, Player player) {
         for (int i = 0; i < 3; i++) {
             if (board[i][0] == Piece.X && board[i][1] == Piece.X && board[i][2] == Piece.X) {
                 return Integer.MAX_VALUE;
