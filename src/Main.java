@@ -4,8 +4,16 @@ import java.util.Scanner;
 
 public class Main {
 
+    enum Player {
+        MAXIMIZER, MINIMIZER;
+
+        public Player opposite() {
+            return this == MAXIMIZER ? MINIMIZER : MAXIMIZER;
+        }
+    }
+
     enum Piece {
-        X, O, EMPTY
+        O, X, EMPTY
     }
 
     public static void main(String[] args) {
@@ -15,11 +23,11 @@ public class Main {
                 board[i][j] = Piece.EMPTY;
             }
         }
-
-        boolean xTurn = true;
+        Player humanPlayer = Player.MAXIMIZER;
+        Player player = humanPlayer;
         printBoard(board);
         while (!gameOver(board)) {
-            if (xTurn) {
+            if (player == Player.MAXIMIZER) {
                 board = playHumanMove(board);
             } else {
                 long startTime = System.currentTimeMillis();
@@ -28,11 +36,11 @@ public class Main {
                 System.out.println("Move took " + elapsed + " ms");
                 printBoard(board);
             }
-            xTurn = !xTurn;
+            player = player.opposite();
         }
-        if (doesHeWin(board, Piece.X)) {
+        if (doesHeWin(board, humanPlayer)) {
             System.out.println("YOU WIN!");
-        } else if (doesHeWin(board, Piece.O)) {
+        } else if (doesHeWin(board, humanPlayer.opposite())) {
             System.out.println("YOU LOSE!");
         } else {
             System.out.println("YOU DRAW!");
@@ -40,7 +48,7 @@ public class Main {
     }
 
     private static boolean gameOver(Piece[][] board) {
-        if (doesHeWin(board, Piece.X) || doesHeWin(board, Piece.O)) {
+        if (doesHeWin(board, Player.MAXIMIZER) || doesHeWin(board, Player.MINIMIZER)) {
             return true;
         }
 
@@ -56,7 +64,6 @@ public class Main {
 
     private static Piece[][] playComputerMove(Piece[][] board) {
         Node root = new Node(board);
-        generateChildrenForNode(root, false);
         evaluateNodes(root, false);
         Node child = minChild(root.children);
         return child.board;
@@ -102,23 +109,45 @@ public class Main {
     }
 
     private static void evaluateNodes(Node root, boolean xTurn) {
-        if (root.children.isEmpty()) {
-            boolean xWins = doesHeWin(root.board, Piece.X);
-            boolean oWins = doesHeWin(root.board, Piece.O);
+        if (gameOver(root.board)) {
+            boolean xWins = doesHeWin(root.board, Player.MAXIMIZER);
+            boolean oWins = doesHeWin(root.board, Player.MINIMIZER);
             boolean draw = !xWins && !oWins;
             if (draw) {
                 root.value = 0;
             } else {
-                root.value = xWins ? 1 : -1;
+                root.value = xWins ? Integer.MAX_VALUE : Integer.MIN_VALUE;
             }
         } else {
-            for (Node child : root.children) {
-                evaluateNodes(child, !xTurn);
-            }
-            if (xTurn) {
-                root.value = maxValue(root.children);
-            } else {
-                root.value = minValue(root.children);
+            root.value = xTurn ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+            root.children = new ArrayList<>();
+            outerloop:
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (root.board[i][j] == Piece.EMPTY) {
+                        //make a new board and place x here, and insert as child
+                        Piece[][] newBoard = new Piece[3][3];
+                        for (int x = 0; x < 3; x++) {
+                            newBoard[x] = Arrays.copyOf(root.board[x], 3);
+                        }
+                        newBoard[i][j] = xTurn ? Piece.X : Piece.O;
+                        Node newChild = new Node(newBoard);
+                        newChild.alpha = root.alpha;
+                        newChild.beta = root.beta;
+                        evaluateNodes(newChild, !xTurn);
+                        root.children.add(newChild);
+                        if (xTurn) {
+                            root.value = Math.max(root.value, newChild.value);
+                            root.alpha = Math.max(root.alpha, newChild.value);
+                        } else {
+                            root.value = Math.min(root.value, newChild.value);
+                            root.beta = Math.min(root.beta, newChild.value);
+                        }
+                        if (root.beta <= root.alpha) {
+                            break outerloop;
+                        }
+                    }
+                }
             }
         }
     }
@@ -159,47 +188,25 @@ public class Main {
         return max;
     }
 
-    private static void generateChildrenForNode(Node root, boolean xTurn) {
-        ArrayList<Node> children = new ArrayList<>();
-        root.children = children;
-        if (doesHeWin(root.board, Piece.X) || doesHeWin(root.board, Piece.O)) {
-            return;
-        }
+    static boolean doesHeWin(Piece[][] board, Player player) {
+        Piece piece = player == Player.MAXIMIZER ? Piece.X : Piece.O;
         for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (root.board[i][j] == Piece.EMPTY) {
-                    //make a new board and place x here, and insert as child
-                    Piece[][] newBoard = new Piece[3][3];
-                    for (int x = 0; x < 3; x++) {
-                        newBoard[x] = Arrays.copyOf(root.board[x], 3);
-                    }
-                    newBoard[i][j] = xTurn ? Piece.X : Piece.O;
-                    Node newChild = new Node(newBoard);
-                    generateChildrenForNode(newChild, !xTurn);
-                    children.add(newChild);
-                }
-            }
-        }
-    }
-
-    static boolean doesHeWin(Piece[][] board, Piece player) {
-        for (int i = 0; i < 3; i++) {
-            if (board[i][0] == player && board[i][1] == player && board[i][2] == player) {
+            if (board[i][0] == piece && board[i][1] == piece && board[i][2] == piece) {
                 return true;
             }
         }
 
         for (int i = 0; i < 3; i++) {
-            if (board[0][i] == player && board[1][i] == player && board[2][i] == player) {
+            if (board[0][i] == piece && board[1][i] == piece && board[2][i] == piece) {
                 return true;
             }
         }
 
-        if (board[0][0] == player && board[1][1] == player && board[2][2] == player) {
+        if (board[0][0] == piece && board[1][1] == piece && board[2][2] == piece) {
             return true;
         }
 
-        if (board[0][2] == player && board[1][1] == player && board[2][0] == player) {
+        if (board[0][2] == piece && board[1][1] == piece && board[2][0] == piece) {
             return true;
         }
 
@@ -209,12 +216,16 @@ public class Main {
     static class Node {
         Piece[][] board;
         int value;
+        int alpha;
+        int beta;
         ArrayList<Node> children;
 
         Node(Piece[][] board) {
             this.board = board;
             this.value = 0;
             this.children = null;
+            alpha = Integer.MIN_VALUE;
+            beta = Integer.MAX_VALUE;
         }
     }
 }
