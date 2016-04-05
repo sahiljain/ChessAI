@@ -5,6 +5,17 @@ import java.util.Scanner;
 
 public class Chess extends Game<Chess.Board> {
 
+    private static final int PAWN_VALUE = 100;
+    private static final int KNIGHT_VALUE = 320;
+    private static final int BISHOP_VALUE = 330;
+    private static final int ROOK_VALUE = 500;
+    private static final int QUEEN_VALUE = 900;
+    private static final int KING_VALUE = 20000;
+
+    Chess() {
+        super(10);
+    }
+
     class Board implements Cloneable{
         Piece[][] arr;
 
@@ -13,6 +24,24 @@ public class Chess extends Game<Chess.Board> {
         }
 
         void init() {
+//            initNormal();
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    arr[i][j] = Piece.EMPTY;
+                }
+            }
+
+            arr[0][0] = Piece.BLACK_KING;
+            arr[7][7] = Piece.WHITE_KING;
+
+            arr[0][1] = Piece.BLACK_ROOK;
+            arr[1][0] = Piece.BLACK_ROOK;
+
+//            arr[7][6] = Piece.WHITE_ROOK;
+//            arr[6][7] = Piece.WHITE_ROOK;
+        }
+
+        private void initNormal() {
             for (int i = 0; i < 8; i++) {
                 for (int j = 0; j < 8; j++) {
                     if (i == 1) {
@@ -127,6 +156,76 @@ public class Chess extends Game<Chess.Board> {
 
     @Override
     public int evaluateBoard(Board board, Player player) {
+        if (doesHeWin(board, Player.MAXIMIZER)) {
+            return Integer.MAX_VALUE;
+        }
+        if (doesHeWin(board, Player.MINIMIZER)) {
+            return Integer.MIN_VALUE;
+        }
+//        return evalMaterial(board) + evalDomination(board) + evalMobility(board, player);
+        return evalMaterial(board) + 20*evalMobility(board) + evalKingAttackers(board)*80;
+    }
+
+    private int evalKingAttackers(Board board) {
+        int score = 0;
+        List<Board> blackMoves = getChildren(board, Player.MINIMIZER);//get all black moves
+        List<Board> whiteMoves = getChildren(board, Player.MAXIMIZER);//get all white moves
+        for (Board b : blackMoves) {
+            boolean hasWhiteKing = false;
+            outerloop:
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    Piece piece = b.arr[i][j];
+                    if (piece == Piece.WHITE_KING) {
+                        hasWhiteKing = true;
+                        break outerloop;
+                    }
+                }
+            }
+            if (!hasWhiteKing) {
+                score--;
+            }
+        }
+        for (Board b : whiteMoves) {
+            boolean hasBlackKing = false;
+            for (int i = 0; i < 8; i++) {
+                for (int j = 0; j < 8; j++) {
+                    Piece piece = b.arr[i][j];
+                    if (piece == Piece.BLACK_KING) {
+                        hasBlackKing = true;
+                        break;
+                    }
+                }
+            }
+            if (!hasBlackKing) {
+                score++;
+            }
+        }
+        return score;
+    }
+
+    private int evalMobility(Board board) {
+        return getChildren(board, Player.MAXIMIZER).size() - getChildren(board, Player.MINIMIZER).size();
+    }
+
+
+    private int evalDomination(Board board) {
+        int whiteValue = 0;
+        int blackValue = 0;
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                Piece piece = board.arr[i][j];
+                if (piece.isWhite()) {
+                    whiteValue += 7 - i;
+                } else if (piece.isBlack()) {
+                    blackValue += i;
+                }
+            }
+        }
+        return whiteValue - blackValue;
+    }
+
+    private int evalMaterial(Board board) {
         //white material - black material
         int whiteValue = 0;
         int blackValue = 0;
@@ -134,33 +233,33 @@ public class Chess extends Game<Chess.Board> {
             for (int j = 0; j < 8; j++) {
                 Piece piece = board.arr[i][j];
                 if (piece == Piece.WHITE_KING) {
-                    whiteValue += 100000;
+                    whiteValue += KING_VALUE;
                 } else if (piece == Piece.BLACK_KING) {
-                    blackValue += 100000;
+                    blackValue += KING_VALUE;
                 } else if (piece == Piece.WHITE_ROOK) {
-                    whiteValue += 5;
+                    whiteValue += ROOK_VALUE;
                 } else if (piece == Piece.BLACK_ROOK) {
-                    blackValue += 5;
+                    blackValue += ROOK_VALUE;
                 } else if (piece == Piece.WHITE_BISHOP) {
-                    whiteValue += 3;
+                    whiteValue += BISHOP_VALUE;
                 } else if (piece == Piece.BLACK_BISHOP) {
-                    blackValue += 3;
+                    blackValue += BISHOP_VALUE;
                 } else if (piece == Piece.BLACK_QUEEN) {
-                    blackValue += 9;
+                    blackValue += QUEEN_VALUE;
                 } else if (piece == Piece.WHITE_QUEEN) {
-                    whiteValue += 9;
+                    whiteValue += QUEEN_VALUE;
                 } else if (piece == Piece.BLACK_KNIGHT) {
-                    blackValue += 3;
+                    blackValue += KNIGHT_VALUE;
                 } else if (piece == Piece.WHITE_KNIGHT) {
-                    whiteValue += 3;
+                    whiteValue += KNIGHT_VALUE;
                 } else if (piece == Piece.BLACK_PAWN) {
-                    blackValue += 1;
+                    blackValue += PAWN_VALUE;
                 } else if (piece == Piece.WHITE_PAWN) {
-                    whiteValue += 1;
+                    whiteValue += PAWN_VALUE;
                 }
             }
         }
-        return player == Player.MAXIMIZER ? whiteValue - blackValue : whiteValue - blackValue;
+        return whiteValue - blackValue;
     }
 
     @Override
@@ -168,6 +267,7 @@ public class Chess extends Game<Chess.Board> {
         //ask user for input
         int startX, startY, endX, endY;
         Piece piece;
+        System.out.println("board value: " + evaluateBoard(currentBoard, humanPlayer));
         Scanner s = new Scanner(System.in);
         while (true) {
             startX = s.nextInt();
@@ -183,11 +283,14 @@ public class Chess extends Game<Chess.Board> {
                 System.out.println("No piece available, try again.");
                 continue;
             }
-            if (piece.isBlack()) {
-                System.out.println("Can't move black, try again.");
+            Board newBoard = currentBoard.clone();
+            newBoard.arr[startX][startY] = Piece.EMPTY;
+            newBoard.arr[endX][endY] = piece;
+            List<Board> children = getChildren(currentBoard, humanPlayer);
+            if (!children.contains(newBoard)) {
+                System.out.println("illegal move");
                 continue;
             }
-            //TODO make it valid for each piece
             break;
         }
         currentBoard.arr[startX][startY] = Piece.EMPTY;
@@ -217,7 +320,7 @@ public class Chess extends Game<Chess.Board> {
 
     @Override
     public List<Board> getChildren(Board board, Player player) {
-        List<Board> children = new ArrayList<>(9);
+        List<Board> children = new ArrayList<>();
 
         Piece kingPiece;
         Piece rookPiece;
@@ -264,12 +367,61 @@ public class Chess extends Game<Chess.Board> {
         if (pawnPiece.isBlack() && i < 7 && board.arr[i+1][j] == Piece.EMPTY) {
             Board newBoard = board.clone();
             newBoard.arr[i][j] = Piece.EMPTY;
-            newBoard.arr[i+1][j] = pawnPiece;
+            if (i+1 == 7) {
+                newBoard.arr[i+1][j] = Piece.BLACK_QUEEN;
+            } else {
+                newBoard.arr[i+1][j] = pawnPiece;
+            }
             children.add(newBoard);
-        } else if (pawnPiece.isWhite() && i > 0 && board.arr[i-1][j] == Piece.EMPTY) {
+        }
+        if (pawnPiece.isWhite() && i > 0 && board.arr[i-1][j] == Piece.EMPTY) {
             Board newBoard = board.clone();
             newBoard.arr[i][j] = Piece.EMPTY;
-            newBoard.arr[i-1][j] = pawnPiece;
+            if (i-1 == 0) {
+                newBoard.arr[i-1][j] = Piece.WHITE_QUEEN;
+            } else {
+                newBoard.arr[i-1][j] = pawnPiece;
+            }
+            children.add(newBoard);
+        }
+        if (pawnPiece.isBlack() && i < 7 && j > 0 && board.arr[i+1][j-1].isWhite()) {
+            Board newBoard = board.clone();
+            newBoard.arr[i][j] = Piece.EMPTY;
+            if (i+1 == 7) {
+                newBoard.arr[i+1][j-1] = Piece.BLACK_QUEEN;
+            } else {
+                newBoard.arr[i+1][j-1] = pawnPiece;
+            }
+            children.add(newBoard);
+        }
+        if (pawnPiece.isBlack() && i < 7 && j < 7 && board.arr[i+1][j+1].isWhite()) {
+            Board newBoard = board.clone();
+            newBoard.arr[i][j] = Piece.EMPTY;
+            if (i+1 == 7) {
+                newBoard.arr[i+1][j+1] = Piece.BLACK_QUEEN;
+            } else {
+                newBoard.arr[i+1][j+1] = pawnPiece;
+            }
+            children.add(newBoard);
+        }
+        if (pawnPiece.isWhite() && i > 0 && j > 0 && board.arr[i-1][j-1].isBlack()) {
+            Board newBoard = board.clone();
+            newBoard.arr[i][j] = Piece.EMPTY;
+            if (i-1 == 0) {
+                newBoard.arr[i-1][j-1] = Piece.WHITE_QUEEN;
+            } else {
+                newBoard.arr[i-1][j-1] = pawnPiece;
+            }
+            children.add(newBoard);
+        }
+        if (pawnPiece.isWhite() && i > 0 && j < 7 && board.arr[i-1][j+1].isBlack()) {
+            Board newBoard = board.clone();
+            newBoard.arr[i][j] = Piece.EMPTY;
+            if (i-1 == 0) {
+                newBoard.arr[i-1][j+1] = Piece.WHITE_QUEEN;
+            } else {
+                newBoard.arr[i-1][j+1] = pawnPiece;
+            }
             children.add(newBoard);
         }
     }
@@ -423,7 +575,7 @@ public class Chess extends Game<Chess.Board> {
     }
 
     private void movePieceAround(Piece piece, int oldX, int oldY, int newX, int newY, Board board, List<Board> children) {
-        if (newX < 7 && newX >= 0 && newY < 7 && newY >= 0) {
+        if (newX <= 7 && newX >= 0 && newY <= 7 && newY >= 0) {
             if (board.arr[newX][newY] == Piece.EMPTY || board.arr[newX][newY].canBeReplacedBy(piece)) {
                 Board newBoard = board.clone();
                 newBoard.arr[oldX][oldY] = Piece.EMPTY;

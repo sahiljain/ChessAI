@@ -1,13 +1,14 @@
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.concurrent.*;
 
 public abstract class Game<BoardType> {
 
     public BoardType currentBoard = null;
+    int timeLimit;
 
-    Game() {
+    Game(int timeLimit) {
+        this.timeLimit = timeLimit;
         initBoard();
     }
 
@@ -45,39 +46,46 @@ public abstract class Game<BoardType> {
 
     public void playComputerMove(Player player) {
         long startTime = System.currentTimeMillis();
-        final Node root = new Node(currentBoard);
-        evaluateNodes(root, player, 4);
+        Node root = new Node(currentBoard);
+        try {
+            evaluateNodes(root, player,1, true);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         Node child = player == Player.MINIMIZER ? minChild(root.children) : maxChild(root.children);
-//        final int[] depth = {4};
+        final int[] depth = {1};
 
-//        ExecutorService executor = Executors.newSingleThreadExecutor();
-//        Callable<Node> task = () -> {
-//            evaluateNodes(root, player, ++depth[0]);
-//            return player == Player.MINIMIZER ? minChild(root.children) : maxChild(root.children);
-//        };
-//
-//        while (true) {
-//            long timeRemaining = startTime + 5 * 1000 - System.currentTimeMillis();
-//            if (timeRemaining <= 0) {
-//                break;
-//            }
-//            Future<Node> future = executor.submit(task);
-//            try {
-//                Node node = future.get(timeRemaining, TimeUnit.MILLISECONDS);
-//                child = node;
-//            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-//                //do nothing
-//            }
-//        }
-//
-//        executor.shutdownNow();
-//        System.out.println("depth: " + depth[0]);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Callable<Node> task = () -> {
+            Node innerRoot = new Node(currentBoard);
+            evaluateNodes(innerRoot, player, ++depth[0], true);
+            return player == Player.MINIMIZER ? minChild(innerRoot.children) : maxChild(innerRoot.children);
+        };
+
+        while (true) {
+            long timeRemaining = startTime + timeLimit * 1000 - System.currentTimeMillis();
+            if (timeRemaining <= 0 || depth[0] > 35) {
+                break;
+            }
+            Future<Node> future = executor.submit(task);
+            try {
+                Node node = future.get(timeRemaining, TimeUnit.MILLISECONDS);
+                child = node;
+//                System.out.println("update");
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                System.out.println("cancelled");
+            }
+        }
+
+        executor.shutdownNow();
+        System.out.println("depth: " + depth[0]);
         currentBoard = child.board;
     }
 
     public abstract List<BoardType> getChildren(BoardType board, Player player);
 
-    private void evaluateNodes(Node root, Player player, int depth) {
+    private void evaluateNodes(Node root, Player player, int depth, boolean pruning) throws InterruptedException {
+        if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
         if (gameOver(root.board) || depth == 0) {
             root.value = evaluateBoard(root.board, player.opposite());
         } else {
@@ -85,10 +93,11 @@ public abstract class Game<BoardType> {
             root.children = new ArrayList<>();
 
             for (BoardType childBoard : getChildren(root.board, player)) {
+                if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
                 Node newChild = new Node(childBoard);
                 newChild.alpha = root.alpha;
                 newChild.beta = root.beta;
-                evaluateNodes(newChild, player.opposite(), depth-1);
+                evaluateNodes(newChild, player.opposite(), depth-1, pruning);
                 root.children.add(newChild);
                 if (player == Player.MAXIMIZER) {
                     root.value = Math.max(root.value, newChild.value);
@@ -97,7 +106,7 @@ public abstract class Game<BoardType> {
                     root.value = Math.min(root.value, newChild.value);
                     root.beta = Math.min(root.beta, newChild.value);
                 }
-                if (root.beta <= root.alpha) {
+                if (pruning && root.beta <= root.alpha) {
                     break;
                 }
             }

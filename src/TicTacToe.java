@@ -5,6 +5,10 @@ import java.util.Scanner;
 
 public class TicTacToe extends Game<TicTacToe.Piece[][]> {
 
+    TicTacToe() {
+        super(3);
+    }
+
     enum Piece {
         O, X, EMPTY
     }
