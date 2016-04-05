@@ -156,11 +156,14 @@ public class Chess extends Game<Chess.Board> {
 
     @Override
     public int evaluateBoard(Board board, Player player) {
-        if (doesHeWin(board, Player.MAXIMIZER)) {
-            return Integer.MAX_VALUE;
-        }
-        if (doesHeWin(board, Player.MINIMIZER)) {
-            return Integer.MIN_VALUE;
+        if (gameOver(board)) {
+            if (doesHeWin(board, Player.MAXIMIZER)) {
+                return Integer.MAX_VALUE;
+            }
+            if (doesHeWin(board, Player.MINIMIZER)) {
+                return Integer.MIN_VALUE;
+            }
+            return 0;
         }
 //        return evalMaterial(board) + evalDomination(board) + evalMobility(board, player);
         return evalMaterial(board) + 20*evalMobility(board) + evalKingAttackers(board)*80;
