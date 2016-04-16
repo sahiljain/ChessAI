@@ -6,7 +6,7 @@ import java.util.Scanner;
 public class ConnectFour extends Game<ConnectFour.Board> {
 
     ConnectFour() {
-        super(2);
+        super(5);
     }
 
     @Override

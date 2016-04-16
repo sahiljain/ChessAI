@@ -48,7 +48,7 @@ public abstract class Game<BoardType> {
         long startTime = System.currentTimeMillis();
         Node root = new Node(currentBoard);
         try {
-            evaluateNodes(root, player,1, true);
+            evaluateNodes(root, player, 1, true);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
