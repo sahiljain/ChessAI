@@ -11,19 +11,20 @@ public class Chess extends Game<Chess.Board> {
     private static final int BOARD_SIZE = 8;
 
     Chess() {
-        super(5);
+        super(7);
     }
 
-    class Board implements Cloneable{
+    class Board implements Cloneable {
         Piece[][] arr;
+        int oldX=-1, oldY=-1, newX=-1, newY=-1;
 
         Board() {
             arr = new Piece[BOARD_SIZE][BOARD_SIZE];
         }
 
         void init() {
-//            initNormal();
-            initRooks();
+            initNormal();
+//            initRooks();
         }
 
         private void initRooks() {
@@ -110,14 +111,23 @@ public class Chess extends Game<Chess.Board> {
 
     @Override
     public void printBoard() {
+        if (currentBoard.newX != -1) {
+            int oldRank = 8 - currentBoard.oldX;
+            int newRank = 8 - currentBoard.newX;
+            char oldFile = (char) ('A' + currentBoard.oldY);
+            char newFile = (char) ('A' + currentBoard.newY);
+            System.out.println("Moved " + oldFile + "" + oldRank + " to " + newFile + "" + newRank);
+        }
         System.out.print("\t");
+        char file = 'A';
         for (int i = 0; i < BOARD_SIZE; i++) {
-            System.out.print("\t" + i + "\t");
+            System.out.print("\t" + file + "\t");
+            file++;
         }
         System.out.println();
         System.out.println("\t ________________________________________________________________");
         for (int i = 0; i < BOARD_SIZE; i++) {
-            System.out.print(i + "\t|");
+            System.out.print((8 - i) + "\t|");
             for (int j = 0; j < BOARD_SIZE; j++) {
                 String c = " ";
                 if (currentBoard.arr[i][j] == Piece.BLACK_KING) {
@@ -147,13 +157,15 @@ public class Chess extends Game<Chess.Board> {
                 }
                 System.out.print("\t" + c + "\t|");
             }
-            System.out.println("\t" + i + "");
+            System.out.println("\t" + (8 - i) + "");
             System.out.println("\t ________________________________________________________________");
         }
 //        System.out.println();
         System.out.print("\t");
+        file = 'A';
         for (int i = 0; i < BOARD_SIZE; i++) {
-            System.out.print("\t" + i + "\t");
+            System.out.print("\t" + file + "\t");
+            file++;
         }
         System.out.println();
     }
@@ -278,6 +290,7 @@ public class Chess extends Game<Chess.Board> {
     @Override
     public void playHumanMove(Player humanPlayer) {
         //ask user for input
+        String start, end;
         int startX, startY, endX, endY;
         Piece piece;
         System.out.println("board value: " + evaluateBoard(currentBoard, humanPlayer));
@@ -285,11 +298,18 @@ public class Chess extends Game<Chess.Board> {
         whileloop:
         while (true) {
             try {
-                startX = s.nextInt();
-                startY = s.nextInt();
-                endX = s.nextInt();
-                endY = s.nextInt();
-            } catch (InputMismatchException e) {
+                start = s.next();
+                end = s.next();
+                char startFile = start.charAt(0);
+                int startRank = Integer.parseInt(start.substring(1, 2));
+                startY = startFile - 'A';
+                startX = 8 - startRank;
+
+                char endFile = end.charAt(0);
+                int endRank = Integer.parseInt(end.substring(1, 2));
+                endY = endFile - 'A';
+                endX = 8 - endRank;
+            } catch (Exception e) {
                 System.out.println("invalid input");
                 continue;
             }
@@ -393,14 +413,22 @@ public class Chess extends Game<Chess.Board> {
     private void movePawnAround(Piece pawnPiece, int i, int j, Board board, List<Board> children) {
         if (pawnPiece.isBlack() && i == 1 && board.arr[2][j] == Piece.EMPTY && board.arr[3][j] == Piece.EMPTY) {
             Board newBoard = board.clone();
-            newBoard.arr[i][j] = Piece.EMPTY;
+            newBoard.arr[1][j] = Piece.EMPTY;
             newBoard.arr[3][j] = pawnPiece;
+            newBoard.oldX = 1;
+            newBoard.oldY = j;
+            newBoard.newX = 3;
+            newBoard.newY = j;
             children.add(newBoard);
         }
         if (pawnPiece.isWhite() && i == 6 && board.arr[5][j] == Piece.EMPTY && board.arr[4][j] == Piece.EMPTY) {
             Board newBoard = board.clone();
-            newBoard.arr[i][j] = Piece.EMPTY;
+            newBoard.arr[6][j] = Piece.EMPTY;
             newBoard.arr[4][j] = pawnPiece;
+            newBoard.oldX = 6;
+            newBoard.oldY = j;
+            newBoard.newX = 4;
+            newBoard.newY = j;
             children.add(newBoard);
         }
         if (pawnPiece.isBlack() && i < 7 && board.arr[i+1][j] == Piece.EMPTY) {
@@ -411,6 +439,10 @@ public class Chess extends Game<Chess.Board> {
             } else {
                 newBoard.arr[i+1][j] = pawnPiece;
             }
+            newBoard.oldX = i;
+            newBoard.oldY = j;
+            newBoard.newX = i+1;
+            newBoard.newY = j;
             children.add(newBoard);
         }
         if (pawnPiece.isWhite() && i > 0 && board.arr[i-1][j] == Piece.EMPTY) {
@@ -421,6 +453,10 @@ public class Chess extends Game<Chess.Board> {
             } else {
                 newBoard.arr[i-1][j] = pawnPiece;
             }
+            newBoard.oldX = i;
+            newBoard.oldY = j;
+            newBoard.newX = i-1;
+            newBoard.newY = j;
             children.add(newBoard);
         }
         if (pawnPiece.isBlack() && i < 7 && j > 0 && board.arr[i+1][j-1].isWhite()) {
@@ -431,6 +467,10 @@ public class Chess extends Game<Chess.Board> {
             } else {
                 newBoard.arr[i+1][j-1] = pawnPiece;
             }
+            newBoard.oldX = i;
+            newBoard.oldY = j;
+            newBoard.newX = i+1;
+            newBoard.newY = j-1;
             children.add(newBoard);
         }
         if (pawnPiece.isBlack() && i < 7 && j < 7 && board.arr[i+1][j+1].isWhite()) {
@@ -441,6 +481,10 @@ public class Chess extends Game<Chess.Board> {
             } else {
                 newBoard.arr[i+1][j+1] = pawnPiece;
             }
+            newBoard.oldX = i;
+            newBoard.oldY = j;
+            newBoard.newX = i+1;
+            newBoard.newY = j+1;
             children.add(newBoard);
         }
         if (pawnPiece.isWhite() && i > 0 && j > 0 && board.arr[i-1][j-1].isBlack()) {
@@ -451,6 +495,10 @@ public class Chess extends Game<Chess.Board> {
             } else {
                 newBoard.arr[i-1][j-1] = pawnPiece;
             }
+            newBoard.oldX = i;
+            newBoard.oldY = j;
+            newBoard.newX = i-1;
+            newBoard.newY = j-1;
             children.add(newBoard);
         }
         if (pawnPiece.isWhite() && i > 0 && j < 7 && board.arr[i-1][j+1].isBlack()) {
@@ -461,6 +509,10 @@ public class Chess extends Game<Chess.Board> {
             } else {
                 newBoard.arr[i-1][j+1] = pawnPiece;
             }
+            newBoard.oldX = i;
+            newBoard.oldY = j;
+            newBoard.newX = i-1;
+            newBoard.newY = j+1;
             children.add(newBoard);
         }
     }
@@ -476,9 +528,11 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[newI-1][newJ-1] = bishopPiece;
-//                if (!equals(newBoard, previousComputerBoard3)) {
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = newI-1;
+                newBoard.newY = newJ-1;
                 children.add(newBoard);
-//                }
             }
             if (board.arr[newI-1][newJ-1] != Piece.EMPTY) {
                 //attack here, and then stop trying
@@ -491,9 +545,11 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[newI+1][newJ+1] = bishopPiece;
-//                if (!equals(newBoard, previousComputerBoard3)) {
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = newI+1;
+                newBoard.newY = newJ+1;
                 children.add(newBoard);
-//                }
             }
             if (board.arr[newI+1][newJ+1] != Piece.EMPTY) {
                 //attack here, and then stop trying
@@ -506,9 +562,11 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[newI-1][newJ+1] = bishopPiece;
-//                if (!equals(newBoard, previousComputerBoard3)) {
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = newI-1;
+                newBoard.newY = newJ+1;
                 children.add(newBoard);
-//                }
             }
             if (board.arr[newI-1][newJ+1] != Piece.EMPTY) {
                 //attack here, and then stop trying
@@ -521,9 +579,11 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[newI+1][newJ-1] = bishopPiece;
-//                if (!equals(newBoard, previousComputerBoard3)) {
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = newI+1;
+                newBoard.newY = newJ-1;
                 children.add(newBoard);
-//                }
             }
             if (board.arr[newI+1][newJ-1] != Piece.EMPTY) {
                 //attack here, and then stop trying
@@ -540,9 +600,11 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[newI-1][j] = rookPiece;
-//                if (!equals(newBoard, previousComputerBoard3)) {
-                    children.add(newBoard);
-//                }
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = newI-1;
+                newBoard.newY = j;
+                children.add(newBoard);
             }
             if (board.arr[newI-1][j] != Piece.EMPTY) {
                 //attack here, and then stop trying
@@ -554,6 +616,10 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[newI+1][j] = rookPiece;
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = newI+1;
+                newBoard.newY = j;
                 children.add(newBoard);
             }
             if (board.arr[newI+1][j] != Piece.EMPTY) {
@@ -566,9 +632,11 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[i][newJ-1] = rookPiece;
-//                if (!equals(newBoard, previousComputerBoard3)) {
-                    children.add(newBoard);
-//                }
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = i;
+                newBoard.newY = newJ-1;
+                children.add(newBoard);
             }
             if (board.arr[i][newJ-1] != Piece.EMPTY) {
                 //attack here, and then stop trying
@@ -580,9 +648,11 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[i][j] = Piece.EMPTY;
                 newBoard.arr[i][newJ+1] = rookPiece;
-//                if (!equals(newBoard, previousComputerBoard3)) {
-                    children.add(newBoard);
-//                }
+                newBoard.oldX = i;
+                newBoard.oldY = j;
+                newBoard.newX = i;
+                newBoard.newY = newJ+1;
+                children.add(newBoard);
             }
             if (board.arr[i][newJ+1] != Piece.EMPTY) {
                 //attack here, and then stop trying
@@ -619,6 +689,10 @@ public class Chess extends Game<Chess.Board> {
                 Board newBoard = board.clone();
                 newBoard.arr[oldX][oldY] = Piece.EMPTY;
                 newBoard.arr[newX][newY] = piece;
+                newBoard.oldX = oldX;
+                newBoard.oldY = oldY;
+                newBoard.newX = newX;
+                newBoard.newY = newY;
                 children.add(newBoard);
             }
         }
